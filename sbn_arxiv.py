@@ -33,12 +33,17 @@ except:
 try:
 	# if date_range is a single day
 	if len(date_range) == 1:
+		# if today is Monday, get submissions from last Friday
+		if (date_range == ['1']) and (datetime.date.today().strftime('%A') == 'Monday'):
+			date_range[0] = '3'
+		# parse the date
 		date_range = [str(datetime.date.today() - datetime.timedelta(days=int(date_range[0])))]
 		date_title = datetime.datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%d %B %Y')
 		date_name = date_range[0]
 
 	# if date_range is a range of days
 	elif len(date_range) == 2:
+		# parse the date
 		date_range = [str(datetime.date.today() - datetime.timedelta(days=n))\
 						for n in range(int(date_range[0]), 1+int(date_range[-1]))][::-1]
 		date_title = datetime.datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%d %B %Y')\
