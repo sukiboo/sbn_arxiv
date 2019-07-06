@@ -4,6 +4,16 @@ import os
 import configparser
 import time, datetime
 import requests
+import logging
+
+
+''' configure the logger '''
+# #logger = logging.getLogger(logging.INFO)
+logging.basicConfig(
+	level = logging.INFO,
+	handlers = [logging.FileHandler('./sbn_arxiv.log'), logging.StreamHandler()],
+	format = '{:s} {:s} {:s}: {:s}'.format('%(asctime)s', '%(levelname)s', '%(module)s', '%(message)s'),
+	datefmt='%Y-%m-%d %H:%M:%S')
 
 
 ''' read the provided settings '''
@@ -11,8 +21,9 @@ import requests
 config = configparser.ConfigParser()
 if os.path.exists('./settings.ini'):
 	config.read('./settings.ini')
+	logging.debug('"settings.ini" file is processed')
 else:
-	print('\nerror: the file "settings.ini" is not found...\n')
+	logging.error('"settings.ini" file is not found')
 	raise SystemExit(0)
 
 # extract the parameters
@@ -24,8 +35,9 @@ try:
 	font_face = config.get('settings', 'font_face')
 	font_size = config.get('settings', 'font_size')
 	display_papers = int(config.get('settings', 'display_papers'))
+	logging.debug('parameter values are extracted')
 except:
-	print('\nerror: something is wrong in the "settings.ini" file...\n')
+	logging.error('parameters are not extracted: error in the "settings.ini" file')
 	raise SystemExit(0)
 
 
@@ -55,7 +67,7 @@ try:
 		raise Exception
 
 except:
-	print('\nerror: the parameter "date_range" from the "settings.ini" file is in a wrong format...\n')
+	logging.error('"date_range" parameter from the "settings.ini" file is in a wrong format')
 	raise SystemExit(0)
 
 
@@ -66,7 +78,7 @@ search_query = 'cat:' + ' OR cat:'.join(subjects)
 try:
 	requests.head('https://arxiv.org/')
 except requests.ConnectionError:
-	print('\nerror: failed to connect to arxiv.org...\n')
+	logging.error('failed to connect to arxiv.org')
 	raise SystemExit(0)
 # submit the search query
 search_result = arxiv.query(search_query, sort_by='lastUpdatedDate', max_results=max_results)
@@ -77,13 +89,13 @@ search_result = arxiv.query(search_query, sort_by='lastUpdatedDate', max_results
 papers = [search_result[i] for i in range(len(search_result)) \
 	if time.strftime('%Y-%m-%d', search_result[i]['updated_parsed']) in date_range\
 	and search_result[i]['arxiv_primary_category']['term'].lower() in subjects]
-
 # sort the papers by priority
 papers.sort(key=lambda p: subjects.index(p['arxiv_primary_category']['term'].lower()))
 
 # create 'html_files' directory if it does not exist
 if not os.path.exists('html_files'):
 	os.makedirs('html_files')
+logging.debug('submissions are processed')
 
 
 ''' generate the html file '''
@@ -99,7 +111,6 @@ if len(papers) > 0:
 	html_file.write('<p>{:d} arXiv submissions from {:s} from {:s}:</p>\n'\
 		.format(len(papers), date_title, \
 		', '.join([s[0] + s[1] + s[2].upper() for s in map(lambda x: x.partition('.'), subjects)])))
-	print('{:d} arXiv submissions from {:s}.\n'.format(len(papers), date_title))
 
 	# iterate over the relevant submissions
 	for paper in papers:
@@ -122,7 +133,10 @@ if len(papers) > 0:
 	html_file.write('</span>\n')
 	html_file.write('</html>')
 	html_file.close()
+	logging.info('{:d} arXiv submissions from {:s} from {:s}.\n'.format(len(papers), date_title, \
+		', '.join([s[0] + s[1] + s[2].upper() for s in map(lambda x: x.partition('.'), subjects)])))
 
 else:
-	print('No relevant arXiv submissions from {:s}.\n'.format(date_title))
+	logging.info('No relevant arXiv submissions from {:s} from {:s}.\n'.format(date_title, \
+		', '.join([s[0] + s[1] + s[2].upper() for s in map(lambda x: x.partition('.'), subjects)])))
 
