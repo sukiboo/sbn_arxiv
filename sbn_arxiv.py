@@ -1,10 +1,9 @@
 
-import arxiv
 import os
-import configparser
-import time, datetime
+import arxiv
 import requests
-import logging
+import logging, configparser
+import time, datetime, calendar
 
 
 ''' configure the logger '''
@@ -12,13 +11,14 @@ import logging
 logging.basicConfig(
 	level = logging.INFO,
 	handlers = [logging.FileHandler('./sbn_arxiv.log'), logging.StreamHandler()],
-	format = '{:s} {:s} {:s}: {:s}'.format('%(asctime)s', '%(levelname)s', '%(module)s', '%(message)s'),
+	format = '{:s} {:s} {:s}: {:s}'\
+		.format('%(asctime)s', '%(levelname)s', '%(module)s', '%(message)s'),
 	datefmt='%Y-%m-%d %H:%M:%S')
 
 
 ''' read the provided settings '''
 # read settings.ini
-config = configparser.ConfigParser()
+config = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
 if os.path.exists('./settings.ini'):
 	config.read('./settings.ini')
 	logging.debug('"settings.ini" file is processed')
@@ -43,6 +43,11 @@ except:
 
 ''' parse the date range '''
 try:
+	# retrieve the previous check time
+	last_check = int(config.get('settings', 'last_check'))
+	if date_range == ['since','last','check'] and last_check == 0:
+		date_range = ['1']
+
 	# if date_range is a single day
 	if len(date_range) == 1:
 		# if today is Monday, get submissions from last Friday
@@ -61,6 +66,13 @@ try:
 		date_title = datetime.datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%d %B %Y')\
 			+ ' -- ' + datetime.datetime.strptime(date_range[-1], '%Y-%m-%d').strftime('%d %B %Y')
 		date_name = date_range[0] + ' to ' + date_range[-1]
+
+	# if date_range is since the last check
+	elif len(date_range) == 3:
+		# parse the date
+		date_range = [str(datetime.date.today())]
+		date_title = datetime.datetime.strptime(date_range[0], '%Y-%m-%d').strftime('%d %B %Y')
+		date_name = date_range[0]
 
 	# other cases
 	else:
@@ -82,23 +94,40 @@ except requests.ConnectionError:
 	raise SystemExit(0)
 # submit the search query
 search_result = arxiv.query(search_query, sort_by='lastUpdatedDate', max_results=max_results)
+# filter results by date
+if date_range == [str(datetime.date.today())]:
+	search_result = list(filter(lambda s:\
+		calendar.timegm(s['updated_parsed']) > last_check, search_result))
+else:
+	search_result = list(filter(lambda s:\
+		time.strftime('%Y-%m-%d', s['updated_parsed']) in date_range, search_result))
 
 
 ''' prepare submissions '''
 # extract papers with matching date and main subject
 papers = [search_result[i] for i in range(len(search_result)) \
-	if time.strftime('%Y-%m-%d', search_result[i]['updated_parsed']) in date_range\
-	and search_result[i]['arxiv_primary_category']['term'].lower() in subjects]
+	if search_result[i]['arxiv_primary_category']['term'].lower() in subjects]
+# update the timestamp of the last check
+if len(papers) > 0:
+	last_check = calendar.timegm(papers[0]['updated_parsed'])
+try:
+	config.set('settings', 'last_check', str(last_check))
+	with open('./settings.ini', 'w') as f:
+		config.write(f)
+	logging.debug('"last_check" is updated in "settings.ini"')
+except:
+	logging.warning('"last_check" could not be updated in "settings.ini"')
 # sort the papers by priority
 papers.sort(key=lambda p: subjects.index(p['arxiv_primary_category']['term'].lower()))
 
+
+''' generate the html file '''
 # create 'html_files' directory if it does not exist
 if not os.path.exists('html_files'):
 	os.makedirs('html_files')
 logging.debug('submissions are processed')
 
-
-''' generate the html file '''
+# process selected papers
 if len(papers) > 0:
 	# create the html file
 	html_file = open('./html_files/arXiv submissions from ' + date_name + '.html', 'w+')
