@@ -4,6 +4,7 @@ import arxiv
 import requests
 import logging, configparser
 import time, datetime, calendar
+from unidecode import unidecode
 
 
 ''' configure the logger '''
@@ -138,7 +139,7 @@ if len(papers) > 0:
 
 	# create the title
 	html_file.write('<p>{:d} arXiv submissions from {:s} from {:s}:</p>\n'\
-		.format(len(papers), date_title, \
+		.format(len(papers), date_title,\
 		', '.join([s[0] + s[1] + s[2].upper() for s in map(lambda x: x.partition('.'), subjects)])))
 
 	# iterate over the relevant submissions
@@ -146,9 +147,9 @@ if len(papers) > 0:
 
 		# write parsed data to the html file
 		html_file.write('<br><a href={:s}>\n'.format(paper['pdf_url']))
-		html_file.write('<b>{:s}</b></a>\n'.format(' '.join(paper['title'].split())))
+		html_file.write('<b>{:s}</b></a>\n'.format(unidecode(' '.join(paper['title'].split()))))
 		html_file.write('[{:s}]\n'.format(', '.join([tag['term'] for tag in paper['tags']])))
-		html_file.write('<br>{:s}\n'.format(', '.join(paper['authors'])))
+		html_file.write('<br>{:s}\n'.format(unidecode(', '.join(paper['authors']))))
 		html_file.write('<br>\n')
 
 		# display the papers in the console
@@ -162,10 +163,10 @@ if len(papers) > 0:
 	html_file.write('</span>\n')
 	html_file.write('</html>')
 	html_file.close()
-	logging.info('{:d} arXiv submissions from {:s} from {:s}.\n'.format(len(papers), date_title, \
+	logging.info('{:d} arXiv submissions from {:s} from {:s}.\n'.format(len(papers), date_title,\
 		', '.join([s[0] + s[1] + s[2].upper() for s in map(lambda x: x.partition('.'), subjects)])))
 
 else:
-	logging.info('No relevant arXiv submissions from {:s} from {:s}.\n'.format(date_title, \
+	logging.info('No relevant arXiv submissions from {:s} from {:s}.\n'.format(date_title,\
 		', '.join([s[0] + s[1] + s[2].upper() for s in map(lambda x: x.partition('.'), subjects)])))
 
