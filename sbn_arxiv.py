@@ -4,7 +4,6 @@ import arxiv
 import requests
 import logging, configparser
 import time, datetime, calendar
-from unidecode import unidecode
 
 
 ''' configure the logger '''
@@ -147,9 +146,9 @@ if len(papers) > 0:
 
 		# write parsed data to the html file
 		html_file.write('<br><a href={:s}>\n'.format(paper['pdf_url']))
-		html_file.write('<b>{:s}</b></a>\n'.format(unidecode(' '.join(paper['title'].split()))))
+		html_file.write('<b>{:s}</b></a>\n'.format(' '.join(paper['title'].split())))
 		html_file.write('[{:s}]\n'.format(', '.join([tag['term'] for tag in paper['tags']])))
-		html_file.write('<br>{:s}\n'.format(unidecode(', '.join(paper['authors']))))
+		html_file.write('<br>{:s}\n'.format(', '.join(paper['authors'])))
 		html_file.write('<br>\n')
 
 		# display the papers in the console
