@@ -176,5 +176,5 @@ if len(papers) > 0:
     logging.info('{:d} arXiv submissions from {:s}.\n'.format(len(papers), date_tags))
 
 else:
-    logging.info('No relevant arXiv submissions from {:s}.\n'.format(date_tags))
+    logging.info('No relevant arXiv submissions from {:s}.\n'.format(date_title))
 
