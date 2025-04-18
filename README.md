@@ -21,12 +21,16 @@ For instance, I use the bash script
     #!/bin/bash
     # execute sbn_arxiv.py
     python sbn_arxiv.py
+
     # go to the directory containing html files 
     cd "html_files"
+
+    # get the latest HTML file
+    latest_file=$(ls -t *.html | head -1)
+    
     # if a file was created recently, send it in an email
-    if [ $(find ./ -type f -ctime -.1 | wc -l) -gt 0 ]
-            then mail -s "$(ls -t | head -1 | cut -f 1 -d '.')" -a
-            'Content-type: text/html' your@email < "$(ls -t | head -1)"
+    if [ $(find "$latest_file" -ctime -0.1 | wc -l) -gt 0 ]; then
+        mail -a "Content-Type: text/html" -s "${latest_file%.*}" your@email < "$latest_file"
     fi
     ```
     and execute it regularly with crontab:
